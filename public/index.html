@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet Draw</title>
+    <meta charset="utf-8" />
+    <script src='https://api.tiles.mapbox.com/mapbox.js/v1.6.2/mapbox.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox.js/v1.6.2/mapbox.css' rel='stylesheet' />
+    <link rel='stylesheet' href='//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-draw/v0.2.2/leaflet.draw.css' />
+    <script src='//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-draw/v0.2.2/leaflet.draw.js'></script>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #delete, #export {
+            position: absolute;
+            top:50px;
+            right:10px;
+            z-index:100;
+            background:white;
+            color:black;
+            padding:6px;
+            border-radius:4px;
+            font-family: 'Helvetica Neue';
+            cursor: pointer;
+            font-size:12px;
+            text-decoration:none;
+        }
+        #export {
+            top:90px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <form action='/draw' method="POST">
+
+            <div id="map" style="height: 600px"></div>
+            <br>
+            <div>
+                <label>The layer To Be Stored:</label>
+                <input id="poly" type="text" class="form-control" name="poly" value="{{request('drawn polygon')}}">
+            </div>
+            <br>
+            <div>
+                <button type="submit" class="btn btn-success">Submit</button>
+            </div>
+
+            <div id='map'></div>
+            <div id='delete'>Delete Features</div>
+            <a href='#' id='export'>Export Features</a>
+        </form>
+    </div>
+    
+    <script>
+        var map = L.mapbox.map('map').setView([28.6334844, 77.1479246], 13);
+        // Set up the Open Street Map layer 
+        L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v9/tiles/256/{z}/{x}/{y}?access_token=Token', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+        maxZoom: 18,
+        id: 'map',
+        accessToken: 'Token'
+        }).addTo(map);
+
+        var drawnItems = L.featureGroup().addTo(map);
+
+new L.Control.Draw({
+    draw : {
+        polygon : true,
+        polyline : true,
+        rectangle : false,     // Rectangles disabled
+        circle : false,        // Circles disabled 
+        circlemarker : false,  // Circle markers disabled
+        marker: true
+	},
+	edit : {
+        featureGroup: drawnItems
+    }
+}).addTo(map);
+
+map.addEventListener("draw:created", function(e) {
+    e.layer.addTo(drawnItems);
+    drawnItems.eachLayer(function(layer) {
+        $('#poly').val(JSON.stringify(layer.toGeoJSON().geometry));
+    });
+});
+
+document.getElementById('delete').onclick = function(e) {
+    drawnItems.clearLayers();
+}
+
+document.getElementById('export').onclick = function(e) {
+var data = drawnItems.toGeoJSON();
+var convertedData = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data));
+document.getElementById('export').setAttribute('href', 'data:' + convertedData);
+document.getElementById('export').setAttribute('download','data.geojson');
+}
+</script>
+</body>
+</html>
